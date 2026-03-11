@@ -154,23 +154,22 @@ function startLearn(saved){
     APP.wordState={};
     Object.entries(saved).forEach(function(kv){
       var idx=parseInt(kv[0]);
-      if(idx>=words.length)return; // skip invalid indices
+      if(idx>=words.length)return;
       APP.wordState[idx]={streak:kv[1].streak||0,seen:kv[1].seen||0,lastWrong:false,cooldown:0,mastered:!!kv[1].mastered,masteredAt:kv[1].masteredAt||null,reviewing:false};
     });
     APP.pool=Object.keys(APP.wordState).map(Number);
     APP.nextUnlocked=Math.max(APP.pool.length,INIT_POOL);
-    // Check if all loaded words are mastered — need to add new ones
+    // Always ensure we have active (non-mastered) words to learn
     var activeCount=APP.pool.filter(function(i){var w=APP.wordState[i];return w&&!w.mastered;}).length;
-    if(activeCount===0&&APP.nextUnlocked<words.length){
-      var toAdd=Math.min(INIT_POOL,words.length-APP.nextUnlocked);
-      for(var i=0;i<toAdd;i++){
-        var ni=APP.nextUnlocked+i;
-        APP.pool.push(ni);
-        APP.wordState[ni]={streak:0,seen:0,lastWrong:false,cooldown:0,mastered:false,masteredAt:null,reviewing:false};
-      }
-      APP.nextUnlocked+=toAdd;
-    } else if(activeCount===0&&APP.nextUnlocked>=words.length){
-      // Everything mastered — show done screen
+    while(activeCount<INIT_POOL&&APP.nextUnlocked<words.length){
+      var ni=APP.nextUnlocked;
+      APP.pool.push(ni);
+      APP.wordState[ni]={streak:0,seen:0,lastWrong:false,cooldown:0,mastered:false,masteredAt:null,reviewing:false};
+      APP.nextUnlocked++;
+      activeCount++;
+    }
+    // If truly everything done
+    if(activeCount===0&&APP.nextUnlocked>=words.length){
       APP.screen="done";APP.combo=0;APP.totalAnswered=0;APP.totalCorrect=0;APP.globalTurn=0;
       render();return;
     }
