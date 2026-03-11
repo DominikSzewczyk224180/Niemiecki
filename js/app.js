@@ -1,7 +1,7 @@
 // ============================================================
 //  APP.JS — with Text-to-Speech for learning
 // ============================================================
-var MASTERY=3,REVIEW_AFTER=8,INIT_POOL=5,ADD_BATCH=2;
+var MASTERY=3,REVIEW_AFTER=8,INIT_POOL=5,ADD_BATCH=1,MAX_ACTIVE=7;
 function shuffle(a){var b=[...a];for(var i=b.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function normalize(s){return s.toLowerCase().replace(/[,.\(\)\-\+]/g,"").replace(/\s+/g," ").trim();}
 function el(tag,attrs){var e=document.createElement(tag);if(attrs)Object.entries(attrs).forEach(function(kv){var k=kv[0],v=kv[1];if(k==="style"&&typeof v==="object")Object.assign(e.style,v);else if(k.startsWith("on"))e.addEventListener(k.slice(2).toLowerCase(),v);else if(k==="class")e.className=v;else if(k==="disabled")e.disabled=v;else e.setAttribute(k,v);});var ch=Array.prototype.slice.call(arguments,2);ch.flat(9).forEach(function(c){if(c==null||c===false)return;if(typeof c==="string"||typeof c==="number")e.appendChild(document.createTextNode(c));else e.appendChild(c);});return e;}
@@ -253,10 +253,11 @@ function handleAnswer(wordIdx,correct){
   var ws=APP.wordState[wordIdx];
   if(correct&&ws.streak>=MASTERY&&!ws.mastered){
     ws.mastered=true;ws.masteredAt=APP.globalTurn;ws.reviewing=false;APP.justMastered=wordIdx;
-    if(APP.nextUnlocked<words.length){
-      var toAdd=Math.min(ADD_BATCH,words.length-APP.nextUnlocked);
-      for(var i=0;i<toAdd;i++){var ni=APP.nextUnlocked+i;APP.pool.push(ni);APP.wordState[ni]={streak:0,seen:0,lastWrong:false,cooldown:0,mastered:false,masteredAt:null,reviewing:false};}
-      APP.justAdded=toAdd;APP.nextUnlocked+=toAdd;
+    var activeCount=APP.pool.filter(function(i){var w=APP.wordState[i];return w&&!w.mastered;}).length;
+    if(APP.nextUnlocked<words.length&&activeCount<MAX_ACTIVE){
+      var toAdd=Math.min(ADD_BATCH,words.length-APP.nextUnlocked,MAX_ACTIVE-activeCount);
+      if(toAdd>0){for(var i=0;i<toAdd;i++){var ni=APP.nextUnlocked+i;APP.pool.push(ni);APP.wordState[ni]={streak:0,seen:0,lastWrong:false,cooldown:0,mastered:false,masteredAt:null,reviewing:false};}
+      APP.justAdded=toAdd;APP.nextUnlocked+=toAdd;}
     }
     saveProg();render();setTimeout(pickNext,1800);
   } else if(correct&&ws.reviewing&&ws.streak>=MASTERY){
