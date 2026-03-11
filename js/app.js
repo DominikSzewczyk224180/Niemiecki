@@ -155,7 +155,11 @@ function startLearn(saved){
     Object.entries(saved).forEach(function(kv){
       var idx=parseInt(kv[0]);
       if(idx>=words.length)return;
-      APP.wordState[idx]={streak:kv[1].streak||0,seen:kv[1].seen||0,lastWrong:false,cooldown:0,mastered:!!kv[1].mastered,masteredAt:kv[1].masteredAt||null,reviewing:false};
+      var isMastered=!!kv[1].mastered;
+      var streak=kv[1].streak||0;
+      // Fix old bug: streak >= MASTERY but not marked mastered
+      if(streak>=MASTERY&&!isMastered){isMastered=true;}
+      APP.wordState[idx]={streak:streak,seen:kv[1].seen||0,lastWrong:false,cooldown:0,mastered:isMastered,masteredAt:kv[1].masteredAt||(isMastered?1:null),reviewing:false};
     });
     APP.pool=Object.keys(APP.wordState).map(Number);
     APP.nextUnlocked=Math.max(APP.pool.length,INIT_POOL);
