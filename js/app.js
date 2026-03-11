@@ -168,9 +168,14 @@ function startLearn(saved){
 function enabledModes(){var m=[];if(APP.modes.flash)m.push("flash");if(APP.modes.quiz4)m.push("quiz4");if(APP.modes.write)m.push("write");if(APP.modes.match)m.push("match");return m.length?m:["flash"];}
 function pickActivityType(streak){
   var avail=enabledModes();if(avail.length===1)return avail[0];
-  var c;if(streak===0)c=avail.filter(function(m){return m==="flash"||m==="quiz4";});
-  else if(streak===1)c=avail.filter(function(m){return m==="quiz4"||m==="flash";});
-  else if(streak===2)c=avail.filter(function(m){return m==="write"||m==="quiz4";});
+  // Force match every ~7 turns if enabled
+  if(!APP._turnCount)APP._turnCount=0;
+  APP._turnCount++;
+  if(avail.indexOf("match")>=0&&APP._turnCount%7===0&&streak>=1)return"match";
+  var c;
+  if(streak===0)c=avail.filter(function(m){return m==="flash"||m==="quiz4";});
+  else if(streak===1)c=avail.filter(function(m){return m==="quiz4"||m==="match"||m==="flash";});
+  else if(streak===2)c=avail.filter(function(m){return m==="write"||m==="quiz4"||m==="match";});
   else c=avail.filter(function(m){return m!=="flash";});
   if(!c.length)c=avail;return shuffle(c)[0];
 }
