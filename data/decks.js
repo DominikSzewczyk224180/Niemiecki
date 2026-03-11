@@ -4,7 +4,7 @@
 //  words: [["niemiecki","polski"], ...]
 // ============================================================
 
-const DECKS = [
+var DECKS = [
   {
     id: "avatar-1",
     title: "Avatar Odc. 1",

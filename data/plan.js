@@ -1,4 +1,4 @@
-const STUDY_PLAN = {
+var STUDY_PLAN = {
   title: "Plan Nauki A2 → B2",
   duration: "24 tygodnie",
   phases: [
@@ -35,7 +35,7 @@ const STUDY_PLAN = {
     {
       id: 4, icon: "💎", title: "Szlifowanie", weeks: "Tyg. 19–24", hours: "1.5–2h/dzień",
       color: "#3C096C",
-      tip: "Język powinien już „płynąć". Skup się na naturalności i pewności siebie.",
+      tip: "Język powinien już płynąć. Skup się na naturalności i pewności siebie.",
       sections: [
         { title: "Cele", items: ["Pewne B2 — rozumienie, mówienie, pisanie", "Słownictwo 5000+", "Gotowość do egzaminu B2 (Goethe / telc)"] },
         { title: "Avatar", items: ["Cały serial jeszcze raz BEZ napisów", "Drugi serial (Dark, Bibi Blocksberg...)", "Podcasty: Easy German, Slow German"] },
