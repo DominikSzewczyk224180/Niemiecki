@@ -168,16 +168,20 @@ function startLearn(saved){
 function enabledModes(){var m=[];if(APP.modes.flash)m.push("flash");if(APP.modes.quiz4)m.push("quiz4");if(APP.modes.write)m.push("write");if(APP.modes.match)m.push("match");return m.length?m:["flash"];}
 function pickActivityType(streak){
   var avail=enabledModes();if(avail.length===1)return avail[0];
-  // Force match every ~7 turns if enabled
   if(!APP._turnCount)APP._turnCount=0;
   APP._turnCount++;
-  if(avail.indexOf("match")>=0&&APP._turnCount%7===0&&streak>=1)return"match";
-  var c;
-  if(streak===0)c=avail.filter(function(m){return m==="flash"||m==="quiz4";});
-  else if(streak===1)c=avail.filter(function(m){return m==="quiz4"||m==="match"||m==="flash";});
-  else if(streak===2)c=avail.filter(function(m){return m==="write"||m==="quiz4"||m==="match";});
-  else c=avail.filter(function(m){return m!=="flash";});
-  if(!c.length)c=avail;return shuffle(c)[0];
+  // Force match every ~12 turns if available and streak>=1
+  if(avail.indexOf("match")>=0&&APP._turnCount%12===0&&streak>=1)return"match";
+  // 15% chance match if available and streak>=1
+  if(avail.indexOf("match")>=0&&streak>=1&&Math.random()<0.15)return"match";
+  // 15% chance write if available and streak>=2
+  if(avail.indexOf("write")>=0&&streak>=2&&Math.random()<0.15)return"write";
+  // Otherwise: flash and quiz equally
+  var core=avail.filter(function(m){return m==="flash"||m==="quiz4";});
+  if(streak===0)return shuffle(core.length?core:avail)[0];
+  // streak 1+: prefer quiz slightly over flash
+  if(core.length>=2&&Math.random()<0.6)return"quiz4";
+  return shuffle(core.length?core:avail)[0];
 }
 
 function pickNext(){
@@ -447,10 +451,34 @@ function renderMatch(wrap,act,words){
           var total=(act.matchWords?act.matchWords.length:4)*2;
           if(APP.matchMatched.size>=total){
             APP.totalAnswered++;APP.totalCorrect++;APP.combo++;
-            act.matchWords.forEach(function(wi){var prev=APP.wordState[wi]||{streak:0,seen:0,lastWrong:false,cooldown:0};APP.wordState[wi]={streak:prev.streak+1,seen:prev.seen+1,lastWrong:false,cooldown:0,mastered:prev.mastered,masteredAt:prev.masteredAt,reviewing:prev.reviewing};});
+            var matched_words=getWords();
+            // Track which words had wrong attempts
+            if(!APP._matchWrongWords)APP._matchWrongWords=new Set();
+            act.matchWords.forEach(function(wi){
+              var prev=APP.wordState[wi]||{streak:0,seen:0,lastWrong:false,cooldown:0,mastered:false,masteredAt:null,reviewing:false};
+              var wasWrong=APP._matchWrongWords.has(wi);
+              var newStreak=wasWrong?Math.max(0,prev.streak-1):prev.streak+2;
+              APP.wordState[wi]={streak:newStreak,seen:prev.seen+1,lastWrong:wasWrong,cooldown:wasWrong?2:0,mastered:prev.mastered,masteredAt:prev.masteredAt,reviewing:prev.reviewing};
+              var ws2=APP.wordState[wi];
+              if(!wasWrong&&newStreak>=MASTERY&&!ws2.mastered){
+                ws2.mastered=true;ws2.masteredAt=APP.globalTurn;ws2.reviewing=false;
+                var activeCount=APP.pool.filter(function(j){var w=APP.wordState[j];return w&&!w.mastered;}).length;
+                if(APP.nextUnlocked<matched_words.length&&activeCount<MAX_ACTIVE){
+                  var toAdd=Math.min(ADD_BATCH,matched_words.length-APP.nextUnlocked,MAX_ACTIVE-activeCount);
+                  if(toAdd>0){for(var k=0;k<toAdd;k++){var ni=APP.nextUnlocked+k;APP.pool.push(ni);APP.wordState[ni]={streak:0,seen:0,lastWrong:false,cooldown:0,mastered:false,masteredAt:null,reviewing:false};}APP.nextUnlocked+=toAdd;}
+                }
+              }
+              if(!wasWrong&&ws2.reviewing&&newStreak>=MASTERY){ws2.mastered=true;ws2.masteredAt=APP.globalTurn;ws2.reviewing=false;}
+            });
+            APP._matchWrongWords=new Set();
             saveProg();render();setTimeout(pickNext,1000);
           } else render();
-        } else {APP.matchWrong=[APP.matchSelected.id,item.id];APP.combo=0;render();setTimeout(function(){APP.matchWrong=null;APP.matchSelected=null;render();},500);}
+        } else {
+          // Track which words were involved in wrong match
+          if(!APP._matchWrongWords)APP._matchWrongWords=new Set();
+          APP._matchWrongWords.add(APP.matchSelected.pairId);
+          APP._matchWrongWords.add(item.pairId);
+          APP.matchWrong=[APP.matchSelected.id,item.id];APP.combo=0;render();setTimeout(function(){APP.matchWrong=null;APP.matchSelected=null;render();},500);}
       });
       col.appendChild(btn);
     });
